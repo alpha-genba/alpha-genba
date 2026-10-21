@@ -14,6 +14,8 @@ an industrial automation equipment manufacturer in Bengaluru, India.
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?logo=tailwindcss&logoColor=white)
 
+**[💻 View the full source code →](https://github.com/alpha-genba/alpha-genba/tree/feat/website-v1)**
+
 </div>
 
 > **Genba (現場)** is a Japanese manufacturing term meaning *"the actual place"*, the shop floor where real work happens. It comes from the Toyota Production System, where problems are solved by going to the genba and seeing them first-hand.
