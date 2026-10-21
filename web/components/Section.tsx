@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Photo } from "./Photo";
 
 /** Small label above a section title, with the short accent line used across the site. */
 export function Eyebrow({ children, light = false }: { children: ReactNode; light?: boolean }) {
@@ -30,17 +31,41 @@ export function SectionHeading({
   );
 }
 
-/** Title band at the top of inner pages. */
-export function PageHeader({ eyebrow, title, intro, children }: { eyebrow: string; title: ReactNode; intro?: ReactNode; children?: ReactNode }) {
+/** Title band at the top of inner pages, optionally with a photo on the right. */
+export function PageHeader({
+  eyebrow,
+  title,
+  intro,
+  photo,
+  children,
+}: {
+  eyebrow: string;
+  title: ReactNode;
+  intro?: ReactNode;
+  photo?: { src: string; alt: string };
+  children?: ReactNode;
+}) {
+  const text = (
+    <div className="rise-in">
+      <Eyebrow>{eyebrow}</Eyebrow>
+      <h1 className="mt-4 max-w-4xl text-4xl font-bold tracking-tight text-slate-900 md:text-[3.25rem] md:leading-[1.1]">{title}</h1>
+      {intro && <p className="mt-6 max-w-3xl text-lg leading-relaxed text-slate-600 md:text-xl">{intro}</p>}
+      {children}
+    </div>
+  );
+
+  if (!photo) {
+    return (
+      <section className="border-b border-slate-200 bg-sky-50">
+        <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 md:py-20">{text}</div>
+      </section>
+    );
+  }
   return (
     <section className="border-b border-slate-200 bg-sky-50">
-      <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 md:py-20">
-        <div className="rise-in">
-          <Eyebrow>{eyebrow}</Eyebrow>
-          <h1 className="mt-4 max-w-4xl text-4xl font-bold tracking-tight text-slate-900 md:text-[3.25rem] md:leading-[1.1]">{title}</h1>
-          {intro && <p className="mt-6 max-w-3xl text-lg leading-relaxed text-slate-600 md:text-xl">{intro}</p>}
-          {children}
-        </div>
+      <div className="mx-auto grid max-w-7xl lg:grid-cols-[1.2fr_1fr]">
+        <div className="flex items-center px-5 py-16 sm:px-8 md:py-20">{text}</div>
+        <Photo src={photo.src} alt={photo.alt} className="rise-in min-h-64 lg:min-h-full" />
       </div>
     </section>
   );

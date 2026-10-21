@@ -78,7 +78,7 @@ function Hero() {
             </Link>
           </div>
         </div>
-        <Photo src={photos.hero || undefined} alt="Alpha Automations machine on the shop floor" label="hero machine" className="rise-in min-h-[22rem] lg:min-h-[38rem]" />
+        <Photo src={photos.hero || undefined} alt="Automated production line with an HMI touchscreen" label="hero machine" className="rise-in min-h-[22rem] lg:min-h-[38rem]" />
       </div>
     </section>
   );
@@ -118,7 +118,7 @@ function About() {
     <section id="about" className="mx-auto max-w-7xl px-5 py-24 sm:px-8 md:py-28">
       <div className="grid items-center gap-14 lg:grid-cols-2">
         <Reveal>
-          <Photo src={photos.about || undefined} alt="The Alpha Automations team at work" label="team at work" className="aspect-[4/3]" />
+          <Photo src={photos.about || undefined} alt="Engineers working together on a production line" label="team at work" className="aspect-[4/3]" />
         </Reveal>
         <Reveal>
           <SectionHeading eyebrow="About us" title="An engineering house for industrial automation" />
@@ -185,16 +185,21 @@ function Approach() {
   return (
     <section className="bg-slate-900 text-white">
       <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 md:py-28">
-        <Reveal>
-          <div className="max-w-3xl">
-            <Eyebrow light>The genba approach</Eyebrow>
+        <div className="grid items-center gap-12 lg:grid-cols-[1.2fr_1fr]">
+          <Reveal>
+            <div className="max-w-3xl">
+              <Eyebrow light>The genba approach</Eyebrow>
             <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-[2.6rem] md:leading-tight">We don&apos;t design machines from a desk.</h2>
             <p className="mt-5 text-lg leading-relaxed text-slate-300">
               <em>Genba (現場)</em> is the Japanese manufacturing word for &ldquo;the actual place&rdquo;, the shop floor where
               real work happens. Every machine we build starts there.
             </p>
-          </div>
-        </Reveal>
+            </div>
+          </Reveal>
+          <Reveal>
+            <Photo src={photos.design || undefined} alt="Machined metal parts on engineering drawings" label="design work" className="aspect-[16/9]" />
+          </Reveal>
+        </div>
         <ol className="mt-14 grid gap-px bg-slate-700 md:grid-cols-2 lg:grid-cols-4">
           {approachSteps.map((step, i) => (
             <li key={step.title} className="bg-slate-900 p-8">

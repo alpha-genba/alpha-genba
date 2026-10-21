@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Check, ChevronDown } from "lucide-react";
-import { approachSteps, benefits, faqs, industries, services } from "@/lib/content";
+import { approachSteps, benefits, faqs, industries, photos, services } from "@/lib/content";
 import { Page } from "@/components/Page";
 import { Reveal } from "@/components/Reveal";
 import { PageHeader, SectionHeading } from "@/components/Section";
@@ -20,6 +20,7 @@ export default function ServicesPage() {
         eyebrow="Services"
         title="What automation does for your factory"
         intro="Automation means letting machines do the repetitive, precise or risky work: the same way, every time. Here is what that means for you, and everything we provide."
+        photo={{ src: photos.panels, alt: "Electrical control panel with servo drives and neat wiring" }}
       />
 
       {/* Quick jump links to each service */}

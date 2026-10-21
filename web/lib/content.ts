@@ -19,11 +19,23 @@ export const company = {
  * Wide landscape photos (at least 1600 px wide) look best.
  */
 export const photos = {
-  hero: "", // a finished machine or the shop floor, the first thing visitors see
-  about: "", // the team at work, or the workshop
-  panels: "", // an open electrical control panel with neat wiring
-  workshop: "", // machine assembly in progress
+  hero: "/images/hero.jpg", // a finished machine or the shop floor, the first thing visitors see
+  about: "/images/team.jpg", // the team at work, or the workshop
+  panels: "/images/control-panel.jpg", // an open electrical control panel with neat wiring
+  design: "/images/engineering-design.jpg", // engineering drawings or design work
 };
+
+/**
+ * The current photos are free stock photos from Unsplash (unsplash.com/license: free for commercial use).
+ * They illustrate the kind of work Alpha Automations does; they are not Alpha Automations' own machines.
+ * Replace them with real photos of the company's machines and team as soon as possible, then empty this list.
+ */
+export const photoCredits = [
+  { name: "Homa Appliances", url: "https://unsplash.com/photos/industrial-manufacturing-machine-control-panel-_XDK4naBbgw" },
+  { name: "ThisisEngineering", url: "https://unsplash.com/photos/engineers-working-in-automotive-factory-WjOWazUPAss" },
+  { name: "Raymond Sime", url: "https://unsplash.com/photos/industrial-control-panel-with-electronic-modules-and-colorful-wiring-UEx6fTODHzI" },
+  { name: "Encata", url: "https://unsplash.com/photos/two-metal-mechanical-parts-on-engineering-blueprints-SRqJ3eli-4I" },
+];
 
 /**
  * The people behind Alpha Automations, shown on the home page.

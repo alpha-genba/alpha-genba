@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
-import { company, services } from "@/lib/content";
+import { company, photoCredits, services } from "@/lib/content";
 import { Logo } from "./Logo";
 
 export function Footer() {
@@ -60,6 +60,20 @@ export function Footer() {
           <span>© Alpha Automations, Bengaluru, India</span>
           <span>Industrial automation · Special purpose machines · Control panels</span>
         </div>
+        {photoCredits.length > 0 && (
+          <p className="mx-auto max-w-7xl px-5 pb-6 text-xs text-slate-600 sm:px-8">
+            Illustrative photos from Unsplash by{" "}
+            {photoCredits.map((c, i) => (
+              <span key={c.url}>
+                {i > 0 && (i === photoCredits.length - 1 ? " and " : ", ")}
+                <a href={c.url} target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:text-slate-400 hover:underline">
+                  {c.name}
+                </a>
+              </span>
+            ))}
+            .
+          </p>
+        )}
       </div>
     </footer>
   );
