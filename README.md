@@ -202,16 +202,6 @@ alpha-genba/
 └── docs/        # Architecture notes and decisions
 ```
 
----
-
-## Roadmap
-
-| Phase | Website | Live Monitoring | Status |
-|---|---|---|---|
-| **0** | Project setup | Machine simulator | 🟡 In progress |
-| **1** | Home, about, services, contact | Simulator sends data to backend | ⚪ Planned |
-| **2** | Project records, quote requests, admin panel | Live dashboard with OEE and Andon | ⚪ Planned |
-| **3** | Launch with real projects and photos | Real PLC integration and pilot at a client factory | ⚪ Planned |
 
 ---
 
