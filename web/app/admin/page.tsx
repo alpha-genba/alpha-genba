@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AdminApp } from "@/components/admin/AdminApp";
+import { Page } from "@/components/Page";
 
 export const metadata: Metadata = {
   title: "Admin",
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function AdminPage() {
-  return <AdminApp />;
+  return (
+    <Page>
+      <AdminApp />
+    </Page>
+  );
 }

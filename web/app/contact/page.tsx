@@ -1,54 +1,75 @@
 import type { Metadata } from "next";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Clock, ExternalLink, Mail, MapPin, Phone } from "lucide-react";
 import { company } from "@/lib/content";
+import { Page } from "@/components/Page";
 import { ContactForm } from "@/components/ContactForm";
+import { PageHeader } from "@/components/Section";
 
 export const metadata: Metadata = {
-  title: "Request a Quote",
-  description: "Tell Alpha Automations about your automation requirement. We'll visit your shop floor and propose a solution.",
+  title: "Contact",
+  description: "Call, email or send Alpha Automations your requirement. We'll get back to you and visit your shop floor.",
 };
 
 export default function ContactPage() {
+  const ways = [
+    { icon: Phone, label: "Call us", value: company.phone, href: company.phoneHref },
+    { icon: Mail, label: "Email us", value: company.email, href: `mailto:${company.email}` },
+  ];
+
   return (
-    <div className="mx-auto grid max-w-6xl gap-14 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.4fr]">
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-400">Request a quote</p>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight">Tell us about your shop floor</h1>
-        <p className="mt-5 text-lg leading-relaxed text-slate-400">
-          Describe the process you want to automate or the problem you&apos;re facing. We&apos;ll get back to you and,
-          where it helps, visit your genba to see it first-hand.
-        </p>
+    <Page>
+      <PageHeader
+        eyebrow="Contact"
+        title="Let's talk about your shop floor"
+        intro="Leave your details and tell us what you want to automate. Our team will call you back and, where it helps, visit your genba to see it first-hand."
+      />
 
-        <ul className="mt-10 space-y-6">
-          <li className="flex gap-4">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-orange-500/10 text-orange-400"><Phone size={20} /></span>
-            <div>
-              <p className="text-sm text-slate-500">Phone</p>
-              <a href={company.phoneHref} className="font-medium hover:text-orange-300">{company.phone}</a>
+      <div className="mx-auto grid max-w-7xl gap-12 px-5 py-16 sm:px-8 md:py-20 lg:grid-cols-[1fr_1.5fr]">
+        <aside className="space-y-5">
+          {ways.map(({ icon: Icon, label, value, href }) => (
+            <a key={label} href={href} className="flex items-center gap-5 rounded-md border border-slate-200 bg-white p-6 hover:border-sky-300">
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-md bg-sky-600 text-white">
+                <Icon size={26} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-slate-500">{label}</span>
+                <span className="block break-all text-lg font-semibold text-slate-900">{value}</span>
+              </span>
+            </a>
+          ))}
+
+          <div className="rounded-md border border-slate-200 bg-white p-6">
+            <div className="flex items-start gap-5">
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-md bg-sky-600 text-white">
+                <MapPin size={26} />
+              </span>
+              <div>
+                <p className="text-slate-500">Visit us</p>
+                <address className="text-lg font-semibold not-italic leading-relaxed text-slate-900">
+                  {company.address.map((line) => (
+                    <span key={line} className="block">{line}</span>
+                  ))}
+                </address>
+                <a
+                  href={company.mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-1.5 font-medium text-sky-700 hover:underline"
+                >
+                  Open in Google Maps <ExternalLink size={16} />
+                </a>
+              </div>
             </div>
-          </li>
-          <li className="flex gap-4">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-orange-500/10 text-orange-400"><Mail size={20} /></span>
-            <div>
-              <p className="text-sm text-slate-500">Email</p>
-              <a href={`mailto:${company.email}`} className="break-all font-medium hover:text-orange-300">{company.email}</a>
-            </div>
-          </li>
-          <li className="flex gap-4">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-orange-500/10 text-orange-400"><MapPin size={20} /></span>
-            <div>
-              <p className="text-sm text-slate-500">Address</p>
-              <address className="font-medium not-italic leading-relaxed">
-                {company.address.map((line) => (
-                  <span key={line} className="block">{line}</span>
-                ))}
-              </address>
-            </div>
-          </li>
-        </ul>
+          </div>
+
+          <p className="flex items-center gap-3 rounded-md bg-sky-50 p-6 text-slate-600">
+            <Clock size={22} className="shrink-0 text-sky-500" />
+            Every enquiry goes straight to our team, and we reply as soon as we can.
+          </p>
+        </aside>
+
+        <ContactForm />
       </div>
-
-      <ContactForm />
-    </div>
+    </Page>
   );
 }

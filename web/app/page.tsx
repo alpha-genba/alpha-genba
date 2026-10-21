@@ -1,80 +1,181 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { Activity, ArrowRight, BellRing, Gauge, Phone } from "lucide-react";
-import { approachSteps, company, services, strengths } from "@/lib/content";
-import { getPublishedProjects } from "@/lib/api";
-import { SectionHeading } from "@/components/Section";
+import { ArrowRight, Check, Cpu, Factory, PanelsTopLeft, Phone, ShieldCheck } from "lucide-react";
+import { approachSteps, company, photos, services, strengths, team } from "@/lib/content";
+import { getPublicOngoing, getPublishedProjects } from "@/lib/api";
+import { siteUrl } from "@/lib/site";
+import { Page } from "@/components/Page";
+import { Photo } from "@/components/Photo";
+import { Reveal } from "@/components/Reveal";
+import { Eyebrow, SectionHeading } from "@/components/Section";
 import { ServiceCard } from "@/components/ServiceCard";
 import { ProjectCard } from "@/components/ProjectCard";
-import { LivePreview } from "@/components/LivePreview";
+import { OngoingCard } from "@/components/ongoing/OngoingCard";
 
 export default function Home() {
   return (
-    <>
+    <Page>
+      <CompanyDetailsForGoogle />
       <Hero />
-      <Services />
+      <Capabilities />
+      <About />
+      <ServicesPreview />
       <Approach />
-      <Strengths />
       <RecentProjects />
-      <LiveMonitoring />
+      <OngoingPreview />
+      <Strengths />
+      <Technologies />
       <CallToAction />
-    </>
+    </Page>
   );
+}
+
+/**
+ * Structured company details that Google reads to show the business name, address and phone.
+ * Only fixed text from lib/content.ts goes in here, never anything a visitor typed.
+ */
+function CompanyDetailsForGoogle() {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    name: company.name,
+    description: company.intro,
+    url: siteUrl,
+    logo: `${siteUrl}/icon.svg`,
+    telephone: company.phone,
+    email: company.email,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: "1948, 3rd Block, Sir M V Layout, Kengeri",
+      addressLocality: "Bengaluru",
+      postalCode: "560110",
+      addressRegion: "Karnataka",
+      addressCountry: "IN",
+    },
+  };
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />;
 }
 
 function Hero() {
   return (
-    <section className="blueprint-grid relative overflow-hidden border-b border-slate-800">
-      <div className="pointer-events-none absolute -top-40 right-0 h-[32rem] w-[32rem] rounded-full bg-orange-500/10 blur-3xl" />
-      <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 md:py-28 lg:grid-cols-[1.3fr_1fr]">
-        <div>
-          <p className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-orange-300">
-            Industrial automation · Bengaluru
-          </p>
-          <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight md:text-6xl">
-            Automated machines, <span className="text-orange-400">built from the genba.</span>
+    <section className="border-b border-slate-200 bg-white">
+      <div className="mx-auto grid max-w-7xl lg:grid-cols-2">
+        <div className="rise-in flex flex-col justify-center px-5 py-16 sm:px-8 md:py-24 lg:pr-14">
+          <Eyebrow>Industrial automation · Bengaluru</Eyebrow>
+          <h1 className="mt-6 text-[2.6rem] font-bold leading-[1.08] tracking-tight text-slate-900 md:text-6xl">
+            Automated machines and control panels, engineered for your shop floor.
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-300">
-            We go to your shop floor, study the real problem, and build complete automated machines and PLC control
-            panels for consistency and maximum output.
+          <p className="mt-7 max-w-xl text-xl leading-relaxed text-slate-600">
+            Alpha Automations designs and builds complete automated and semi-automated machines and PLC-controlled
+            electrical panels, for consistent quality and maximum output.
           </p>
-          <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-            <Link
-              href="/contact"
-              className="flex items-center justify-center gap-2 rounded-lg bg-orange-500 px-6 py-3 font-semibold text-slate-950 transition hover:bg-orange-400"
-            >
-              Request a Quote <ArrowRight size={18} />
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+            <Link href="/contact" className="flex items-center justify-center gap-2 rounded-md bg-sky-600 px-7 py-4 text-lg font-semibold text-white transition hover:bg-sky-700">
+              Get a quote <ArrowRight size={20} />
             </Link>
-            <Link
-              href="/#services"
-              className="flex items-center justify-center rounded-lg border border-slate-700 px-6 py-3 font-semibold transition hover:bg-slate-900"
-            >
-              Our Services
+            <Link href="/projects" className="flex items-center justify-center rounded-md border border-slate-300 px-7 py-4 text-lg font-semibold text-slate-800 transition hover:border-sky-600 hover:text-sky-700">
+              View our projects
             </Link>
           </div>
-          <p className="mt-10 text-sm text-slate-500">
-            Works with <span className="text-slate-300">Mitsubishi</span> and <span className="text-slate-300">Siemens</span>{" "}
-            PLCs · Servo drives · VFDs · HMI · FL-net · Profibus
-          </p>
         </div>
-        <LivePreview />
+        <Photo src={photos.hero || undefined} alt="Alpha Automations machine on the shop floor" label="hero machine" className="rise-in min-h-[22rem] lg:min-h-[38rem]" />
       </div>
     </section>
   );
 }
 
-function Services() {
+function Capabilities() {
+  const items = [
+    { icon: Factory, title: "Special purpose machines", text: "Automated and semi-automated" },
+    { icon: PanelsTopLeft, title: "Electrical control panels", text: "PLC-controlled, built in-house" },
+    { icon: Cpu, title: "Mitsubishi & Siemens", text: "PLCs, servo drives, VFDs, HMI" },
+    { icon: ShieldCheck, title: "Poka-Yoke & vision", text: "Error-proofing and inspection" },
+  ];
   return (
-    <section id="services" className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
-      <SectionHeading
-        eyebrow="What we do"
-        title="Complete industrial automation, under one roof"
-        intro="From a single control panel to a fully automated machine, we design, build and install automation for every industry."
-      />
-      <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {services.map((s) => (
-          <ServiceCard key={s.title} service={s} />
+    <section className="bg-slate-900">
+      <div className="mx-auto grid max-w-7xl sm:grid-cols-2 lg:grid-cols-4">
+        {items.map(({ icon: Icon, title, text }, i) => (
+          <div key={title} className={`flex items-center gap-4 px-5 py-7 sm:px-8 ${i > 0 ? "border-t border-slate-800 sm:border-t-0 sm:border-l" : ""}`}>
+            <Icon size={34} strokeWidth={1.5} className="shrink-0 text-sky-400" />
+            <div>
+              <p className="font-semibold text-white">{title}</p>
+              <p className="text-slate-400">{text}</p>
+            </div>
+          </div>
         ))}
+      </div>
+    </section>
+  );
+}
+
+function About() {
+  const pillars = [
+    { title: "Engineering", text: "We understand the process, cycle time and quality target before anything is designed." },
+    { title: "Design", text: "Mechanical, electrical, pneumatic and PLC design, done together by one team." },
+    { title: "Implementation", text: "Manufacturing, panel building, programming, installation and commissioning at your site." },
+  ];
+  return (
+    <section id="about" className="mx-auto max-w-7xl px-5 py-24 sm:px-8 md:py-28">
+      <div className="grid items-center gap-14 lg:grid-cols-2">
+        <Reveal>
+          <Photo src={photos.about || undefined} alt="The Alpha Automations team at work" label="team at work" className="aspect-[4/3]" />
+        </Reveal>
+        <Reveal>
+          <SectionHeading eyebrow="About us" title="An engineering house for industrial automation" />
+          <p className="mt-6 text-lg leading-relaxed text-slate-600">{company.intro}</p>
+          <ul className="mt-8 divide-y divide-slate-200 border-y border-slate-200">
+            {pillars.map((p) => (
+              <li key={p.title} className="flex gap-4 py-5">
+                <Check size={22} className="mt-1 shrink-0 text-sky-600" />
+                <div>
+                  <p className="font-semibold text-slate-900">{p.title}</p>
+                  <p className="mt-1 leading-relaxed text-slate-600">{p.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Reveal>
+      </div>
+
+      {team.length > 0 && (
+        <div className="mt-24">
+          <Reveal>
+            <SectionHeading eyebrow="Our team" title="The people behind the machines" />
+          </Reveal>
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {team.map((m) => (
+              <Reveal key={m.name}>
+                <div className="h-full border border-slate-200 p-7">
+                  <p className="text-xl font-semibold text-slate-900">{m.name}</p>
+                  <p className="font-medium text-sky-700">{m.role}</p>
+                  <p className="mt-3 leading-relaxed text-slate-600">{m.bio}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ServicesPreview() {
+  return (
+    <section className="border-t border-slate-200 bg-slate-50">
+      <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 md:py-28">
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <Reveal>
+            <SectionHeading eyebrow="What we do" title="Complete industrial automation, under one roof" />
+          </Reveal>
+          <Link href="/services" className="group flex shrink-0 items-center gap-2 text-lg font-semibold text-sky-700">
+            All services <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
+          </Link>
+        </div>
+        <div className="mt-12 grid gap-px bg-slate-200 sm:grid-cols-2 lg:grid-cols-3 [&>*]:bg-white">
+          {services.slice(0, 6).map((s, i) => (
+            <ServiceCard key={s.slug} service={s} index={i} />
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -82,24 +183,24 @@ function Services() {
 
 function Approach() {
   return (
-    <section id="approach" className="border-y border-slate-800 bg-slate-900/30">
-      <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
-        <SectionHeading
-          eyebrow="The genba approach"
-          title="We don't design machines from a desk"
-          intro={
-            <>
-              <em>Genba (現場)</em> is a Japanese manufacturing word for &ldquo;the actual place&rdquo;, the shop floor
-              where real work happens. Every machine we build starts there.
-            </>
-          }
-        />
-        <ol className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+    <section className="bg-slate-900 text-white">
+      <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 md:py-28">
+        <Reveal>
+          <div className="max-w-3xl">
+            <Eyebrow light>The genba approach</Eyebrow>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-[2.6rem] md:leading-tight">We don&apos;t design machines from a desk.</h2>
+            <p className="mt-5 text-lg leading-relaxed text-slate-300">
+              <em>Genba (現場)</em> is the Japanese manufacturing word for &ldquo;the actual place&rdquo;, the shop floor where
+              real work happens. Every machine we build starts there.
+            </p>
+          </div>
+        </Reveal>
+        <ol className="mt-14 grid gap-px bg-slate-700 md:grid-cols-2 lg:grid-cols-4">
           {approachSteps.map((step, i) => (
-            <li key={step.title} className="relative rounded-xl border border-slate-800 bg-slate-950 p-6">
-              <span className="font-mono text-sm text-orange-400">0{i + 1}</span>
-              <h3 className="mt-3 text-lg font-semibold">{step.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-400">{step.description}</p>
+            <li key={step.title} className="bg-slate-900 p-8">
+              <span className="font-mono text-4xl font-medium text-sky-400">0{i + 1}</span>
+              <h3 className="mt-5 text-xl font-semibold">{step.title}</h3>
+              <p className="mt-3 leading-relaxed text-slate-400">{step.description}</p>
             </li>
           ))}
         </ol>
@@ -108,36 +209,20 @@ function Approach() {
   );
 }
 
-function Strengths() {
-  return (
-    <section className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
-      <SectionHeading eyebrow="Why Alpha Automations" title="Built for the way your factory actually runs" />
-      <div className="mt-12 grid gap-x-10 gap-y-8 md:grid-cols-2">
-        {strengths.map((s) => (
-          <div key={s.title} className="border-l-2 border-orange-500 pl-5">
-            <h3 className="text-lg font-semibold">{s.title}</h3>
-            <p className="mt-2 leading-relaxed text-slate-400">{s.description}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function RecentProjects() {
   return (
-    <section className="border-t border-slate-800">
-      <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
-        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <SectionHeading eyebrow="Our work" title="Recent projects" />
-          <Link href="/projects" className="flex items-center gap-1.5 font-medium text-orange-400 hover:gap-2.5 transition-all">
-            All projects <ArrowRight size={18} />
-          </Link>
-        </div>
-        <Suspense fallback={<ProjectsSkeleton />}>
-          <RecentProjectList />
-        </Suspense>
+    <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8 md:py-28">
+      <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+        <Reveal>
+          <SectionHeading eyebrow="Our projects" title="Machines we've delivered" />
+        </Reveal>
+        <Link href="/projects" className="group flex shrink-0 items-center gap-2 text-lg font-semibold text-sky-700">
+          All projects <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
+        </Link>
       </div>
+      <Suspense fallback={<CardsSkeleton />}>
+        <RecentProjectList />
+      </Suspense>
     </section>
   );
 }
@@ -146,14 +231,14 @@ async function RecentProjectList() {
   const projects = await getPublishedProjects();
   if (!projects || projects.length === 0) {
     return (
-      <div className="mt-10 rounded-xl border border-dashed border-slate-700 p-10 text-center text-slate-400">
-        We&apos;re adding our project records here soon.{" "}
-        <Link href="/contact" className="text-orange-400 hover:underline">Ask us about our past work.</Link>
-      </div>
+      <EmptyNote>
+        Our project records are being added.{" "}
+        <Link href="/contact" className="font-semibold text-sky-700 hover:underline">Ask us about our past work.</Link>
+      </EmptyNote>
     );
   }
   return (
-    <div className="mt-10 grid gap-6 md:grid-cols-3">
+    <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {projects.slice(0, 3).map((p) => (
         <ProjectCard key={p.id} project={p} />
       ))}
@@ -161,45 +246,71 @@ async function RecentProjectList() {
   );
 }
 
-function ProjectsSkeleton() {
+function OngoingPreview() {
   return (
-    <div className="mt-10 grid gap-6 md:grid-cols-3">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="h-72 animate-pulse rounded-xl bg-slate-900" />
+    <section className="border-t border-slate-200 bg-sky-50">
+      <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 md:py-28">
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <Reveal>
+            <SectionHeading eyebrow="In progress" title="Currently on our shop floor" intro="Follow machines being built: progress, stage, photos and videos, updated by our team." />
+          </Reveal>
+          <Link href="/ongoing" className="group flex shrink-0 items-center gap-2 text-lg font-semibold text-sky-700">
+            All ongoing projects <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
+          </Link>
+        </div>
+        <Suspense fallback={<CardsSkeleton />}>
+          <OngoingList />
+        </Suspense>
+      </div>
+    </section>
+  );
+}
+
+async function OngoingList() {
+  const list = await getPublicOngoing();
+  if (!list || list.length === 0) {
+    return <EmptyNote>Updates from projects in progress will appear here.</EmptyNote>;
+  }
+  return (
+    <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {list.slice(0, 3).map((p) => (
+        <OngoingCard key={p.id} project={p} />
       ))}
     </div>
   );
 }
 
-function LiveMonitoring() {
-  const features = [
-    { icon: Activity, title: "Live machine status", text: "Running, idle or faulted, for every machine on the line." },
-    { icon: BellRing, title: "Digital Andon", text: "The moment a machine stops, the right people know why." },
-    { icon: Gauge, title: "OEE tracking", text: "Availability × Performance × Quality, calculated live." },
-  ];
+function Strengths() {
   return (
-    <section className="border-t border-slate-800 bg-gradient-to-b from-slate-900/60 to-slate-950">
-      <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
-        <SectionHeading
-          eyebrow="Alpha Genba · Live monitoring"
-          title="See your genba live, from anywhere"
-          intro="Our machines can connect to Alpha Genba, a monitoring platform that reads data from the PLC and shows what's happening on your shop floor in real time."
-        />
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {features.map(({ icon: Icon, title, text }) => (
-            <div key={title} className="rounded-xl border border-slate-800 bg-slate-950/70 p-6">
-              <Icon className="text-orange-400" size={24} />
-              <h3 className="mt-4 font-semibold">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-400">{text}</p>
+    <section className="mx-auto max-w-7xl px-5 py-24 sm:px-8 md:py-28">
+      <div className="grid gap-14 lg:grid-cols-[1fr_1.4fr]">
+        <Reveal>
+          <SectionHeading eyebrow="Why Alpha Automations" title="Built for the way your factory actually runs" />
+        </Reveal>
+        <div className="grid gap-px bg-slate-200 sm:grid-cols-2">
+          {strengths.map((s) => (
+            <div key={s.title} className="bg-white p-7">
+              <h3 className="text-xl font-semibold text-slate-900">{s.title}</h3>
+              <p className="mt-2 leading-relaxed text-slate-600">{s.description}</p>
             </div>
           ))}
         </div>
-        <Link
-          href="/live"
-          className="mt-10 inline-flex items-center gap-2 rounded-lg border border-orange-500/50 px-6 py-3 font-semibold text-orange-300 transition hover:bg-orange-500 hover:text-slate-950"
-        >
-          Try the live demo <ArrowRight size={18} />
-        </Link>
+      </div>
+    </section>
+  );
+}
+
+function Technologies() {
+  const tech = ["Mitsubishi Q-Series PLC", "Mitsubishi FX-Series PLC", "Siemens PLC & drives", "Servo drives", "VFDs", "HMI", "FL-net", "Profibus", "Pneumatics", "Vision systems", "Barcode scanners & printers"];
+  return (
+    <section className="border-y border-slate-200 bg-slate-50">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 py-12 sm:px-8 lg:flex-row lg:items-center">
+        <p className="shrink-0 font-semibold uppercase tracking-[0.15em] text-slate-500 lg:w-56">Technologies we work with</p>
+        <ul className="flex flex-wrap gap-2.5">
+          {tech.map((t) => (
+            <li key={t} className="rounded-sm border border-slate-200 bg-white px-4 py-2 font-medium text-slate-700">{t}</li>
+          ))}
+        </ul>
       </div>
     </section>
   );
@@ -207,23 +318,35 @@ function LiveMonitoring() {
 
 function CallToAction() {
   return (
-    <section className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
-      <div className="flex flex-col items-start justify-between gap-8 rounded-2xl bg-orange-500 p-10 text-slate-950 md:flex-row md:items-center md:p-14">
+    <section className="bg-sky-700 text-white">
+      <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-5 py-16 sm:px-8 md:flex-row md:items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Have a problem on your shop floor?</h2>
-          <p className="mt-3 max-w-xl text-lg text-slate-900/80">
-            Tell us about it. We&apos;ll visit your genba and propose the right machine for the job.
-          </p>
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Have a problem on your shop floor?</h2>
+          <p className="mt-3 max-w-xl text-lg text-sky-100">Tell us about it. We&apos;ll visit your genba and propose the right machine for the job.</p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Link href="/contact" className="rounded-lg bg-slate-950 px-6 py-3 text-center font-semibold text-white hover:bg-slate-800">
-            Request a Quote
+          <Link href="/contact" className="rounded-md bg-white px-7 py-4 text-center text-lg font-semibold text-sky-800 transition hover:bg-sky-50">
+            Get a quote
           </Link>
-          <a href={company.phoneHref} className="flex items-center justify-center gap-2 rounded-lg border border-slate-950/30 px-6 py-3 font-semibold hover:bg-orange-400">
-            <Phone size={18} /> Call us
+          <a href={company.phoneHref} className="flex items-center justify-center gap-2 rounded-md border border-sky-300 px-7 py-4 text-lg font-semibold transition hover:bg-sky-600">
+            <Phone size={20} /> {company.phone}
           </a>
         </div>
       </div>
     </section>
   );
+}
+
+function CardsSkeleton() {
+  return (
+    <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="h-96 animate-pulse bg-slate-100" />
+      ))}
+    </div>
+  );
+}
+
+function EmptyNote({ children }: { children: React.ReactNode }) {
+  return <div className="mt-12 border border-dashed border-slate-300 bg-white p-12 text-center text-lg text-slate-500">{children}</div>;
 }

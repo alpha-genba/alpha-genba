@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { getPublishedProjects } from "@/lib/api";
+import { Page } from "@/components/Page";
 import { ProjectCard } from "@/components/ProjectCard";
-import { SectionHeading } from "@/components/Section";
+import { PageHeader } from "@/components/Section";
 
 export const metadata: Metadata = {
   title: "Projects",
@@ -12,16 +13,18 @@ export const metadata: Metadata = {
 
 export default function ProjectsPage() {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-      <SectionHeading
-        eyebrow="Project records"
+    <Page>
+      <PageHeader
+        eyebrow="Our projects"
         title="Machines we've built"
         intro="Every project starts at the client's genba. Here is the problem we found, the machine we built, and what changed."
       />
-      <Suspense fallback={<div className="mt-12 h-72 animate-pulse rounded-xl bg-slate-900" />}>
-        <ProjectList />
-      </Suspense>
-    </div>
+      <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8">
+        <Suspense fallback={<Skeleton />}>
+          <ProjectList />
+        </Suspense>
+      </section>
+    </Page>
   );
 }
 
@@ -29,20 +32,30 @@ async function ProjectList() {
   const projects = await getPublishedProjects();
 
   if (projects === null) {
-    return <p className="mt-12 text-slate-400">Project records can&apos;t be loaded right now. Please try again soon.</p>;
+    return <p className="text-lg text-slate-500">Project records can&apos;t be loaded right now. Please try again soon.</p>;
   }
   if (projects.length === 0) {
     return (
-      <div className="mt-12 rounded-xl border border-dashed border-slate-700 p-12 text-center text-slate-400">
+      <div className="rounded-md border border-dashed border-slate-300 p-14 text-center text-lg text-slate-500">
         Our project records are being added.{" "}
-        <Link href="/contact" className="text-orange-400 hover:underline">Contact us</Link> to hear about our past work.
+        <Link href="/contact" className="font-semibold text-sky-700 hover:underline">Contact us</Link> to hear about our past work.
       </div>
     );
   }
   return (
-    <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
       {projects.map((p) => (
         <ProjectCard key={p.id} project={p} />
+      ))}
+    </div>
+  );
+}
+
+function Skeleton() {
+  return (
+    <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="h-96 animate-pulse rounded-md bg-slate-100" />
       ))}
     </div>
   );

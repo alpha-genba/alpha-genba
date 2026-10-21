@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -28,6 +27,7 @@ type Project struct {
 	Result       string    `json:"result"`
 	Technologies []string  `json:"technologies"`
 	ImageURL     string    `json:"imageUrl"`
+	Gallery      []string  `json:"gallery"`
 	CompletedOn  string    `json:"completedOn"` // "YYYY-MM-DD" or ""
 	Published    bool      `json:"published"`
 	CreatedAt    time.Time `json:"createdAt"`
@@ -45,6 +45,7 @@ type projectInput struct {
 	Result       string   `json:"result"`
 	Technologies []string `json:"technologies"`
 	ImageURL     string   `json:"imageUrl"`
+	Gallery      []string `json:"gallery"`
 	CompletedOn  string   `json:"completedOn"`
 	Published    bool     `json:"published"`
 }
@@ -109,11 +110,23 @@ func (in projectInput) validate() (projectInput, validationError) {
 	if len(in.Technologies) > 20 {
 		errs["technologies"] = "List at most 20 technologies."
 	}
-	if in.ImageURL != "" {
-		u, err := url.Parse(in.ImageURL)
-		isPath := strings.HasPrefix(in.ImageURL, "/")
-		if err != nil || (!isPath && u.Scheme != "https" && u.Scheme != "http") {
-			errs["imageUrl"] = "Use a full image link (https://...) or a path like /images/machine.jpg."
+	if in.ImageURL != "" && !validMediaURL(in.ImageURL) {
+		errs["imageUrl"] = "Upload a photo, or use a full image link (https://...)."
+	}
+	gallery := make([]string, 0, len(in.Gallery))
+	for _, g := range in.Gallery {
+		if g = strings.TrimSpace(g); g != "" {
+			gallery = append(gallery, g)
+		}
+	}
+	in.Gallery = gallery
+	if len(in.Gallery) > 30 {
+		errs["gallery"] = "Add at most 30 photos."
+	}
+	for _, g := range in.Gallery {
+		if !validMediaURL(g) {
+			errs["gallery"] = "One of the gallery photos is not valid."
+			break
 		}
 	}
 	if in.CompletedOn != "" {
@@ -130,13 +143,13 @@ func (in projectInput) validate() (projectInput, validationError) {
 type projectStore struct{ db *pgxpool.Pool }
 
 const projectColumns = `id, slug, title, industry, summary, problem, solution, result,
-	technologies, image_url, completed_on, published, created_at, updated_at`
+	technologies, image_url, gallery, completed_on, published, created_at, updated_at`
 
 func scanProject(row pgx.CollectableRow) (Project, error) {
 	var p Project
 	var completed pgtype.Date
 	err := row.Scan(&p.ID, &p.Slug, &p.Title, &p.Industry, &p.Summary, &p.Problem, &p.Solution,
-		&p.Result, &p.Technologies, &p.ImageURL, &completed, &p.Published, &p.CreatedAt, &p.UpdatedAt)
+		&p.Result, &p.Technologies, &p.ImageURL, &p.Gallery, &completed, &p.Published, &p.CreatedAt, &p.UpdatedAt)
 	if completed.Valid {
 		p.CompletedOn = completed.Time.Format(time.DateOnly)
 	}
@@ -179,11 +192,11 @@ func nullableDate(s string) any {
 func (s projectStore) create(ctx context.Context, in projectInput) (Project, error) {
 	rows, err := s.db.Query(ctx, `
 		INSERT INTO projects (slug, title, industry, summary, problem, solution, result,
-		                      technologies, image_url, completed_on, published)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		                      technologies, image_url, gallery, completed_on, published)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING `+projectColumns,
 		in.Slug, in.Title, in.Industry, in.Summary, in.Problem, in.Solution, in.Result,
-		in.Technologies, in.ImageURL, nullableDate(in.CompletedOn), in.Published)
+		in.Technologies, in.ImageURL, in.Gallery, nullableDate(in.CompletedOn), in.Published)
 	if err != nil {
 		return Project{}, err
 	}
@@ -193,12 +206,12 @@ func (s projectStore) create(ctx context.Context, in projectInput) (Project, err
 func (s projectStore) update(ctx context.Context, id int64, in projectInput) (Project, error) {
 	rows, err := s.db.Query(ctx, `
 		UPDATE projects SET slug = $1, title = $2, industry = $3, summary = $4, problem = $5,
-		       solution = $6, result = $7, technologies = $8, image_url = $9,
-		       completed_on = $10, published = $11, updated_at = now()
-		WHERE id = $12
+		       solution = $6, result = $7, technologies = $8, image_url = $9, gallery = $10,
+		       completed_on = $11, published = $12, updated_at = now()
+		WHERE id = $13
 		RETURNING `+projectColumns,
 		in.Slug, in.Title, in.Industry, in.Summary, in.Problem, in.Solution, in.Result,
-		in.Technologies, in.ImageURL, nullableDate(in.CompletedOn), in.Published, id)
+		in.Technologies, in.ImageURL, in.Gallery, nullableDate(in.CompletedOn), in.Published, id)
 	if err != nil {
 		return Project{}, err
 	}
@@ -209,15 +222,41 @@ func (s projectStore) update(ctx context.Context, id int64, in projectInput) (Pr
 	return p, err
 }
 
-func (s projectStore) delete(ctx context.Context, id int64) error {
-	tag, err := s.db.Exec(ctx, `DELETE FROM projects WHERE id = $1`, id)
-	if err != nil {
-		return err
+// photos returns every image URL a project currently uses.
+func (s projectStore) photos(ctx context.Context, id int64) ([]string, error) {
+	var image string
+	var gallery []string
+	err := s.db.QueryRow(ctx, `SELECT image_url, gallery FROM projects WHERE id = $1`, id).Scan(&image, &gallery)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, errNotFound
 	}
-	if tag.RowsAffected() == 0 {
-		return errNotFound
+	return append([]string{image}, gallery...), err
+}
+
+// delete removes the project and returns the photo URLs it used, so the files can be deleted too.
+func (s projectStore) delete(ctx context.Context, id int64) ([]string, error) {
+	var image string
+	var gallery []string
+	err := s.db.QueryRow(ctx, `DELETE FROM projects WHERE id = $1 RETURNING image_url, gallery`, id).Scan(&image, &gallery)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, errNotFound
 	}
-	return nil
+	return append([]string{image}, gallery...), err
+}
+
+// unused returns the URLs in before that are no longer in after.
+func unused(before, after []string) []string {
+	keep := make(map[string]bool, len(after))
+	for _, u := range after {
+		keep[u] = true
+	}
+	var gone []string
+	for _, u := range before {
+		if !keep[u] {
+			gone = append(gone, u)
+		}
+	}
+	return gone
 }
 
 func isUniqueViolation(err error) bool {
@@ -283,6 +322,11 @@ func (app *App) handleUpdateProject(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	before, err := app.projects.photos(r.Context(), id)
+	if err != nil && !errors.Is(err, errNotFound) {
+		app.serverError(w, "update project", err)
+		return
+	}
 	p, err := app.projects.update(r.Context(), id, in)
 	switch {
 	case errors.Is(err, errNotFound):
@@ -292,6 +336,7 @@ func (app *App) handleUpdateProject(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		app.serverError(w, "update project", err)
 	default:
+		app.removeUploads(unused(before, append([]string{p.ImageURL}, p.Gallery...))...)
 		writeJSON(w, http.StatusOK, p)
 	}
 }
@@ -302,12 +347,14 @@ func (app *App) handleDeleteProject(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid project id")
 		return
 	}
-	switch err := app.projects.delete(r.Context(), id); {
+	urls, err := app.projects.delete(r.Context(), id)
+	switch {
 	case errors.Is(err, errNotFound):
 		writeError(w, http.StatusNotFound, "project not found")
 	case err != nil:
 		app.serverError(w, "delete project", err)
 	default:
+		app.removeUploads(urls...)
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 	}
 }

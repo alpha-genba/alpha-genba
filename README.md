@@ -194,9 +194,10 @@ No data is lost, even on unreliable factory networks.
 
 ```
 alpha-genba/
-├── backend/     # Go: REST API, admin login, PostgreSQL access, live monitoring feed
+├── backend/     # Go: REST API, owner login, uploads, PostgreSQL access
 ├── simulator/   # Go: simulated factory (machines, faults, OEE) with tests
-├── web/         # Next.js: company website, live dashboard, admin panel
+├── web/         # Next.js: company website and owner admin panel
+├── docs/        # Development guide: how everything was built, step by step
 ├── gateway/     # (planned) Go: edge gateway that reads real PLC data
 └── deploy/      # (planned) Docker and deployment configuration
 ```
@@ -235,11 +236,13 @@ Open http://localhost:3000. The website forwards every `/api` request to the bac
 
 | Page | What it is |
 |---|---|
-| `/` | Home: services, genba approach, recent projects, live preview |
-| `/projects` | Project records added from the admin panel |
-| `/contact` | Request a Quote form (saved to PostgreSQL) |
-| `/live` | Live monitoring demo: machine status, Andon, OEE |
-| `/admin` | Admin panel: manage enquiries and projects |
+| `/` | Home: about Alpha Automations, genba approach, services, recent and ongoing projects |
+| `/projects` | Completed projects with photo galleries, managed from the admin panel |
+| `/services` | What automation does for clients: benefits, every service explained, industries, FAQ |
+| `/ongoing` | Machines being built now: progress %, stage, photo and video updates |
+| `/track/{link}` | A client's private page for their own project (shared by the team) |
+| `/contact` | Company contact details + enquiry form (saved to PostgreSQL) |
+| `/admin` | Admin panel: enquiries with team notes, ongoing projects and updates, completed projects |
 
 **Run the tests**
 
@@ -254,10 +257,15 @@ go test ./...
 | `GET` | `/api/health` | Public |
 | `GET` | `/api/projects`, `/api/projects/{slug}` | Public (published only) |
 | `POST` | `/api/enquiries` | Public (validated, rate-limited, spam honeypot) |
-| `GET` | `/api/monitor` | Public (live demo snapshot) |
+| `GET` | `/api/ongoing`, `/api/ongoing/{slug}` | Public (public ongoing projects only) |
+| `GET` | `/api/track/{token}` | Anyone with the client's private link |
+| `GET` | `/api/uploads/{file}` | Public (uploaded photos and videos) |
 | `POST` | `/api/admin/login`, `/api/admin/logout` | Login is rate-limited |
-| `GET` / `PATCH` | `/api/admin/enquiries[/{id}]` | Admin |
+| `GET` / `PATCH` | `/api/admin/enquiries[/{id}]` | Admin (status and team notes) |
 | `GET` / `POST` / `PUT` / `DELETE` | `/api/admin/projects[/{id}]` | Admin |
+| `GET` / `POST` / `PUT` / `DELETE` | `/api/admin/ongoing[/{id}]` | Admin |
+| `POST` / `DELETE` | `/api/admin/ongoing/{id}/updates`, `/api/admin/updates/{id}` | Admin |
+| `POST` | `/api/admin/uploads` | Admin (photos up to 10 MB, videos up to 300 MB, type checked from file contents) |
 
 ---
 
@@ -266,8 +274,8 @@ go test ./...
 | Phase | Website | Live Monitoring | Status |
 |---|---|---|---|
 | **0** | Project setup | Machine simulator | ✅ Done |
-| **1** | Home, services, approach, contact | Simulator feeds the backend | ✅ Done |
-| **2** | Project records, quote requests, admin panel | Live dashboard with OEE and Andon | ✅ Done |
+| **1** | Home, services, approach, contact | Simulator and OEE maths | ✅ Done |
+| **2** | Project records, quote requests, admin panel, ongoing projects with photo/video updates | Machine simulator with OEE (in `simulator/`, not on the public site) | ✅ Done |
 | **3** | Real projects and photos, deployment | MQTT + WebSockets, real PLC integration, pilot at a client factory | ⚪ Planned |
 
 ---

@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ExternalLink, Pencil, Plus, Trash } from "lucide-react";
-import type { Project } from "@/lib/api";
+import { ExternalLink, Factory, Pencil, Plus, Trash } from "lucide-react";
+import type { Media, Project } from "@/lib/api";
 import { api, ApiError } from "./api";
+import { MediaUpload } from "./MediaUpload";
+import { ErrorBox, Field, inputClass, PrimaryButton, SecondaryButton } from "./ui";
 
 type Draft = Omit<Project, "id" | "createdAt" | "updatedAt">;
 
@@ -18,6 +20,7 @@ const emptyDraft: Draft = {
   result: "",
   technologies: [],
   imageUrl: "",
+  gallery: [],
   completedOn: "",
   published: false,
 };
@@ -42,7 +45,7 @@ export function ProjectsTab({ onUnauthorized }: { onUnauthorized: () => void }) 
   useEffect(load, [load]);
 
   async function remove(p: Project) {
-    if (!confirm(`Delete "${p.title}"? This cannot be undone.`)) return;
+    if (!confirm(`Delete "${p.title}" and its photos? This cannot be undone.`)) return;
     try {
       await api(`/admin/projects/${p.id}`, { method: "DELETE" });
       load();
@@ -66,55 +69,56 @@ export function ProjectsTab({ onUnauthorized }: { onUnauthorized: () => void }) 
     );
   }
 
-  if (error) return <p className="text-red-400">{error}</p>;
+  if (error) return <p className="text-red-600">{error}</p>;
   if (!projects) return <p className="text-slate-500">Loading projects...</p>;
 
   return (
     <>
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-400">
-          Projects marked <span className="text-emerald-300">Published</span> appear on the website.
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <p className="text-lg text-slate-600">
+          Machines you&apos;ve delivered. Projects marked <span className="font-semibold text-emerald-700">Published</span> appear on the website.
         </p>
-        <button
-          onClick={() => setEditing({ id: null, draft: emptyDraft })}
-          className="flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-orange-400"
-        >
-          <Plus size={16} /> New project
-        </button>
+        <PrimaryButton type="button" onClick={() => setEditing({ id: null, draft: emptyDraft })}>
+          <Plus size={20} /> New project
+        </PrimaryButton>
       </div>
 
       {projects.length === 0 ? (
-        <p className="mt-10 rounded-xl border border-dashed border-slate-700 p-10 text-center text-slate-500">
+        <p className="mt-10 rounded-md border-2 border-dashed border-sky-200 p-12 text-center text-lg text-slate-500">
           No projects yet. Add the first machine Alpha Automations delivered.
         </p>
       ) : (
-        <ul className="mt-6 divide-y divide-slate-800 rounded-xl border border-slate-800">
+        <ul className="mt-8 grid gap-4 md:grid-cols-2">
           {projects.map((p) => (
-            <li key={p.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
-              <div>
-                <p className="font-medium">{p.title}</p>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  /projects/{p.slug} {p.industry && `· ${p.industry}`}
-                </p>
+            <li key={p.id} className="flex items-center gap-4 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="h-20 w-24 shrink-0 overflow-hidden rounded-md bg-sky-50">
+                {p.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.imageUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="grid h-full place-items-center text-sky-300"><Factory size={28} /></div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                    p.published ? "bg-emerald-500/15 text-emerald-300" : "bg-slate-800 text-slate-400"
-                  }`}
-                >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-lg font-semibold text-slate-900">{p.title}</p>
+                <p className="truncate text-sm text-slate-500">
+                  {p.industry || "No industry"} · {p.gallery.length + (p.imageUrl ? 1 : 0)} photos
+                </p>
+                <span className={`mt-1.5 inline-block rounded-md px-3 py-0.5 text-sm font-semibold ${p.published ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
                   {p.published ? "Published" : "Draft"}
                 </span>
+              </div>
+              <div className="flex shrink-0 flex-col gap-1 sm:flex-row">
                 {p.published && (
-                  <Link href={`/projects/${p.slug}`} target="_blank" className="rounded-md p-2 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="View on website">
-                    <ExternalLink size={16} />
+                  <Link href={`/projects/${p.slug}`} target="_blank" className="rounded-full p-2.5 text-slate-500 transition hover:bg-sky-50 hover:text-sky-700" aria-label="View on website">
+                    <ExternalLink size={20} />
                   </Link>
                 )}
-                <button onClick={() => setEditing({ id: p.id, draft: p })} className="rounded-md p-2 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label={`Edit ${p.title}`}>
-                  <Pencil size={16} />
+                <button onClick={() => setEditing({ id: p.id, draft: p })} className="rounded-full p-2.5 text-slate-500 transition hover:bg-sky-50 hover:text-sky-700" aria-label={`Edit ${p.title}`}>
+                  <Pencil size={20} />
                 </button>
-                <button onClick={() => remove(p)} className="rounded-md p-2 text-slate-400 hover:bg-red-500/10 hover:text-red-400" aria-label={`Delete ${p.title}`}>
-                  <Trash size={16} />
+                <button onClick={() => remove(p)} className="rounded-full p-2.5 text-slate-500 transition hover:bg-red-50 hover:text-red-600" aria-label={`Delete ${p.title}`}>
+                  <Trash size={20} />
                 </button>
               </div>
             </li>
@@ -124,9 +128,6 @@ export function ProjectsTab({ onUnauthorized }: { onUnauthorized: () => void }) 
     </>
   );
 }
-
-const inputClass =
-  "mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-slate-100 focus:border-orange-500 focus:outline-none";
 
 function ProjectForm({
   initial,
@@ -143,6 +144,8 @@ function ProjectForm({
 }) {
   const [draft, setDraft] = useState<Draft>(initial);
   const [techText, setTechText] = useState(initial.technologies.join(", "));
+  const [cover, setCover] = useState<Media[]>(initial.imageUrl ? [{ kind: "image", url: initial.imageUrl }] : []);
+  const [gallery, setGallery] = useState<Media[]>(initial.gallery.map((url) => ({ kind: "image", url })));
   const [fields, setFields] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -164,7 +167,8 @@ function ProjectForm({
       solution: draft.solution,
       result: draft.result,
       technologies: techText.split(",").map((t) => t.trim()).filter(Boolean),
-      imageUrl: draft.imageUrl,
+      imageUrl: cover[0]?.url ?? "",
+      gallery: gallery.map((g) => g.url),
       completedOn: draft.completedOn,
       published: draft.published,
     };
@@ -185,58 +189,59 @@ function ProjectForm({
     }
   }
 
-  const text = (key: keyof Draft, label: string, hint?: string) => (
-    <div>
-      <label htmlFor={key} className="text-sm font-medium text-slate-300">{label}</label>
-      <input id={key} value={draft[key] as string} onChange={(e) => set(key, e.target.value)} className={inputClass} />
-      {fields[key] ? <p className="mt-1 text-sm text-red-400">{fields[key]}</p> : hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
-    </div>
-  );
-
-  const area = (key: "problem" | "solution" | "result", label: string, placeholder: string) => (
-    <div>
-      <label htmlFor={key} className="text-sm font-medium text-slate-300">{label}</label>
-      <textarea id={key} rows={4} value={draft[key]} onChange={(e) => set(key, e.target.value)} placeholder={placeholder} className={inputClass} />
-      {fields[key] && <p className="mt-1 text-sm text-red-400">{fields[key]}</p>}
-    </div>
-  );
-
   return (
-    <form onSubmit={submit} className="space-y-5 rounded-2xl border border-slate-800 bg-slate-900/50 p-6 sm:p-8">
-      <h2 className="text-xl font-semibold">{projectId ? "Edit project" : "New project"}</h2>
-      <div className="grid gap-5 sm:grid-cols-2">
-        {text("title", "Title *")}
-        {text("slug", "URL slug", "Leave empty to create it from the title.")}
-        {text("industry", "Industry", "e.g. Automotive components")}
-        <div>
-          <label htmlFor="completedOn" className="text-sm font-medium text-slate-300">Completed on</label>
-          <input id="completedOn" type="date" value={draft.completedOn} onChange={(e) => set("completedOn", e.target.value)} className={inputClass} />
-          {fields.completedOn && <p className="mt-1 text-sm text-red-400">{fields.completedOn}</p>}
-        </div>
+    <form onSubmit={submit} className="space-y-7 rounded-md border border-slate-200 bg-white p-6 shadow-sm sm:p-10">
+      <h2 className="text-2xl font-bold text-slate-900">{projectId ? "Edit completed project" : "New completed project"}</h2>
+
+      <div className="grid gap-6 sm:grid-cols-2">
+        <Field label="Title *" error={fields.title}>
+          <input value={draft.title} onChange={(e) => set("title", e.target.value)} className={inputClass} />
+        </Field>
+        <Field label="Industry" hint="e.g. Automotive components" error={fields.industry}>
+          <input value={draft.industry} onChange={(e) => set("industry", e.target.value)} className={inputClass} />
+        </Field>
+        <Field label="Completed on" error={fields.completedOn}>
+          <input type="date" value={draft.completedOn} onChange={(e) => set("completedOn", e.target.value)} className={inputClass} />
+        </Field>
+        <Field label="Web address (slug)" hint="Leave empty to create it from the title." error={fields.slug}>
+          <input value={draft.slug} onChange={(e) => set("slug", e.target.value)} className={inputClass} />
+        </Field>
       </div>
-      {text("summary", "Short summary", "One or two sentences shown on the project card.")}
-      {area("problem", "The problem at the genba", "What did the team see on the client's shop floor?")}
-      {area("solution", "What we built", "The machine or panel, and how it works.")}
-      {area("result", "The result", "What changed for the client? Use real numbers where you have them.")}
-      <div>
-        <label htmlFor="technologies" className="text-sm font-medium text-slate-300">Technologies</label>
-        <input id="technologies" value={techText} onChange={(e) => setTechText(e.target.value)} className={inputClass} />
-        <p className="mt-1 text-xs text-slate-500">Separate with commas, e.g. Mitsubishi FX5U, Servo drive, Vision camera</p>
+
+      <Field label="Short summary" hint="One or two sentences shown on the project card." error={fields.summary}>
+        <input value={draft.summary} onChange={(e) => set("summary", e.target.value)} className={inputClass} />
+      </Field>
+
+      <MediaUpload label="Main photo" value={cover} setValue={setCover} allowVideo={false} multiple={false} />
+
+      <div className="grid gap-6 md:grid-cols-3">
+        <Field label="The problem at the genba" error={fields.problem}>
+          <textarea rows={5} value={draft.problem} onChange={(e) => set("problem", e.target.value)} placeholder="What did the team see on the client's shop floor?" className={inputClass} />
+        </Field>
+        <Field label="What we built" error={fields.solution}>
+          <textarea rows={5} value={draft.solution} onChange={(e) => set("solution", e.target.value)} placeholder="The machine or panel, and how it works." className={inputClass} />
+        </Field>
+        <Field label="The result" error={fields.result}>
+          <textarea rows={5} value={draft.result} onChange={(e) => set("result", e.target.value)} placeholder="What changed for the client? Real numbers help." className={inputClass} />
+        </Field>
       </div>
-      {text("imageUrl", "Photo link", "A full image link (https://...) or a file in web/public, e.g. /images/machine.jpg")}
-      <label className="flex items-center gap-3 text-sm">
-        <input type="checkbox" checked={draft.published} onChange={(e) => set("published", e.target.checked)} className="h-4 w-4 accent-orange-500" />
-        Published (show on the website)
+
+      <MediaUpload label="More photos (gallery)" value={gallery} setValue={setGallery} allowVideo={false} />
+      {fields.gallery && <p className="text-red-600">{fields.gallery}</p>}
+
+      <Field label="Technologies" hint="Separate with commas, e.g. Mitsubishi FX5U, Servo drive, Vision camera">
+        <input value={techText} onChange={(e) => setTechText(e.target.value)} className={inputClass} />
+      </Field>
+
+      <label className="flex cursor-pointer items-center gap-3 rounded-md bg-sky-50 p-4 text-lg">
+        <input type="checkbox" checked={draft.published} onChange={(e) => set("published", e.target.checked)} className="h-5 w-5 accent-sky-500" />
+        Published (show this project on the website)
       </label>
 
-      {error && <p className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>}
-      <div className="flex gap-3">
-        <button disabled={busy} className="rounded-lg bg-orange-500 px-5 py-2.5 font-semibold text-slate-950 hover:bg-orange-400 disabled:opacity-60">
-          {busy ? "Saving..." : "Save project"}
-        </button>
-        <button type="button" onClick={onCancel} className="rounded-lg border border-slate-700 px-5 py-2.5 hover:bg-slate-800">
-          Cancel
-        </button>
+      {error && <ErrorBox>{error}</ErrorBox>}
+      <div className="flex flex-wrap gap-3">
+        <PrimaryButton disabled={busy}>{busy ? "Saving..." : "Save project"}</PrimaryButton>
+        <SecondaryButton onClick={onCancel}>Cancel</SecondaryButton>
       </div>
     </form>
   );

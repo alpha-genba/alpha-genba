@@ -17,6 +17,9 @@ CREATE TABLE IF NOT EXISTS enquiries (
 
 CREATE INDEX IF NOT EXISTS enquiries_created_at_idx ON enquiries (created_at DESC);
 
+-- Private notes the team keeps about an enquiry (never shown to the client).
+ALTER TABLE enquiries ADD COLUMN IF NOT EXISTS admin_note TEXT NOT NULL DEFAULT '';
+
 -- Machines and projects Alpha Automations has delivered.
 CREATE TABLE IF NOT EXISTS projects (
     id            BIGSERIAL PRIMARY KEY,
@@ -35,15 +38,39 @@ CREATE TABLE IF NOT EXISTS projects (
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Machine state changes from the live monitoring system.
-CREATE TABLE IF NOT EXISTS machine_events (
-    id          BIGSERIAL PRIMARY KEY,
-    machine_id  TEXT NOT NULL,
-    from_status TEXT NOT NULL,
-    to_status   TEXT NOT NULL,
-    fault_code  TEXT NOT NULL DEFAULT '',
-    message     TEXT NOT NULL DEFAULT '',
-    occurred_at TIMESTAMPTZ NOT NULL
+-- Extra photos for a completed project.
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS gallery TEXT[] NOT NULL DEFAULT '{}';
+
+-- Machines currently being designed, built or installed.
+CREATE TABLE IF NOT EXISTS ongoing_projects (
+    id                  BIGSERIAL PRIMARY KEY,
+    slug                TEXT NOT NULL UNIQUE,
+    title               TEXT NOT NULL,
+    client              TEXT NOT NULL DEFAULT '',   -- client name shown on the page (optional)
+    industry            TEXT NOT NULL DEFAULT '',
+    summary             TEXT NOT NULL DEFAULT '',
+    stage               TEXT NOT NULL DEFAULT 'design'
+                        CHECK (stage IN ('design', 'manufacturing', 'assembly', 'testing', 'installation', 'completed')),
+    progress            INT NOT NULL DEFAULT 0 CHECK (progress BETWEEN 0 AND 100),
+    expected_completion DATE,
+    cover_url           TEXT NOT NULL DEFAULT '',
+    -- public: listed on the Ongoing Projects page; private: only visible through the client's tracking link
+    visibility          TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('public', 'private')),
+    share_token         TEXT NOT NULL UNIQUE,       -- secret part of the client's tracking link
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS machine_events_machine_time_idx ON machine_events (machine_id, occurred_at DESC);
+-- Progress updates posted by the team, with photos and video recordings.
+CREATE TABLE IF NOT EXISTS project_updates (
+    id          BIGSERIAL PRIMARY KEY,
+    project_id  BIGINT NOT NULL REFERENCES ongoing_projects (id) ON DELETE CASCADE,
+    title       TEXT NOT NULL,
+    message     TEXT NOT NULL DEFAULT '',
+    progress    INT NOT NULL CHECK (progress BETWEEN 0 AND 100),
+    stage       TEXT NOT NULL,
+    media       JSONB NOT NULL DEFAULT '[]',        -- [{"kind": "image" | "video", "url": "..."}]
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS project_updates_project_time_idx ON project_updates (project_id, created_at DESC);

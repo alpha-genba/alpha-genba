@@ -18,6 +18,7 @@ type Config struct {
 	SessionSecret string // key used to sign admin session cookies
 	Production    bool   // true when running on the real server
 	DevDataDir    string // where the embedded dev database keeps its files
+	UploadDir     string // where uploaded photos and videos are stored
 }
 
 func loadConfig() Config {
@@ -31,6 +32,7 @@ func loadConfig() Config {
 		SessionSecret: os.Getenv("SESSION_SECRET"),
 		Production:    os.Getenv("APP_ENV") == "production",
 		DevDataDir:    getenv("DEV_DATA_DIR", ".devdata"),
+		UploadDir:     getenv("UPLOAD_DIR", ".devdata/uploads"),
 	}
 
 	if cfg.SessionSecret == "" {

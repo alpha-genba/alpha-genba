@@ -1,5 +1,5 @@
 // Command backend is the Alpha Genba API server. It serves the company website
-// (projects, quote requests), the admin panel, and the live monitoring demo.
+// (projects, quote requests, ongoing project updates) and the admin panel.
 //
 // Run it from the repository root:
 //
@@ -15,7 +15,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/alpha-genba/alpha-genba/simulator"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -25,7 +24,7 @@ type App struct {
 	db             *pgxpool.Pool
 	enquiries      enquiryStore
 	projects       projectStore
-	factory        *simulator.Factory
+	ongoing        ongoingStore
 	enquiryLimiter *rateLimiter
 	loginLimiter   *rateLimiter
 }
@@ -48,11 +47,10 @@ func main() {
 		db:             db,
 		enquiries:      enquiryStore{db},
 		projects:       projectStore{db},
-		factory:        newDemoFactory(),
+		ongoing:        ongoingStore{db},
 		enquiryLimiter: newRateLimiter(5, 10*time.Minute),
 		loginLimiter:   newRateLimiter(10, 15*time.Minute),
 	}
-	go app.runFactory(ctx)
 
 	server := &http.Server{
 		Addr:              cfg.Addr,
@@ -88,7 +86,10 @@ func (app *App) routes() http.Handler {
 	mux.HandleFunc("GET /api/projects", app.handleListPublishedProjects)
 	mux.HandleFunc("GET /api/projects/{slug}", app.handleGetProject)
 	mux.HandleFunc("POST /api/enquiries", app.handleCreateEnquiry)
-	mux.HandleFunc("GET /api/monitor", app.handleMonitor)
+	mux.HandleFunc("GET /api/ongoing", app.handleListPublicOngoing)
+	mux.HandleFunc("GET /api/ongoing/{slug}", app.handleGetPublicOngoing)
+	mux.HandleFunc("GET /api/track/{token}", app.handleTrack)
+	mux.HandleFunc("GET /api/uploads/{name}", app.handleServeUpload)
 
 	// Admin panel
 	mux.HandleFunc("POST /api/admin/login", app.handleLogin)
@@ -100,6 +101,14 @@ func (app *App) routes() http.Handler {
 	mux.HandleFunc("POST /api/admin/projects", app.requireAdmin(app.handleCreateProject))
 	mux.HandleFunc("PUT /api/admin/projects/{id}", app.requireAdmin(app.handleUpdateProject))
 	mux.HandleFunc("DELETE /api/admin/projects/{id}", app.requireAdmin(app.handleDeleteProject))
+	mux.HandleFunc("GET /api/admin/ongoing", app.requireAdmin(app.handleAdminListOngoing))
+	mux.HandleFunc("GET /api/admin/ongoing/{id}", app.requireAdmin(app.handleAdminGetOngoing))
+	mux.HandleFunc("POST /api/admin/ongoing", app.requireAdmin(app.handleCreateOngoing))
+	mux.HandleFunc("PUT /api/admin/ongoing/{id}", app.requireAdmin(app.handleUpdateOngoing))
+	mux.HandleFunc("DELETE /api/admin/ongoing/{id}", app.requireAdmin(app.handleDeleteOngoing))
+	mux.HandleFunc("POST /api/admin/ongoing/{id}/updates", app.requireAdmin(app.handleAddUpdate))
+	mux.HandleFunc("DELETE /api/admin/updates/{id}", app.requireAdmin(app.handleDeleteUpdate))
+	mux.HandleFunc("POST /api/admin/uploads", app.requireAdmin(app.handleUpload))
 
 	return mux
 }

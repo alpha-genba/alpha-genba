@@ -22,6 +22,7 @@ type Enquiry struct {
 	Industry  string    `json:"industry"`
 	Message   string    `json:"message"`
 	Status    string    `json:"status"`
+	AdminNote string    `json:"adminNote"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 
@@ -60,15 +61,14 @@ func (in enquiryInput) validate() (enquiryInput, validationError) {
 	if len(in.Industry) > 100 {
 		errs["industry"] = "Industry is too long."
 	}
-	if in.Email == "" && in.Phone == "" {
-		errs["email"] = "Please give an email or a phone number so we can reply."
-	}
 	if in.Email != "" {
 		if addr, err := mail.ParseAddress(in.Email); err != nil || addr.Address != in.Email || len(in.Email) > 200 {
 			errs["email"] = "Please enter a valid email address."
 		}
 	}
-	if in.Phone != "" && !validPhone(in.Phone) {
+	if in.Phone == "" {
+		errs["phone"] = "Please enter your phone number so we can call you back."
+	} else if !validPhone(in.Phone) {
 		errs["phone"] = "Please enter a valid phone number."
 	}
 	if len(in.Message) < 10 {
@@ -103,30 +103,33 @@ func (s enquiryStore) create(ctx context.Context, in enquiryInput) (Enquiry, err
 	err := s.db.QueryRow(ctx, `
 		INSERT INTO enquiries (name, company, email, phone, industry, message)
 		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, name, company, email, phone, industry, message, status, created_at`,
+		RETURNING id, name, company, email, phone, industry, message, status, admin_note, created_at`,
 		in.Name, in.Company, in.Email, in.Phone, in.Industry, in.Message,
-	).Scan(&e.ID, &e.Name, &e.Company, &e.Email, &e.Phone, &e.Industry, &e.Message, &e.Status, &e.CreatedAt)
+	).Scan(&e.ID, &e.Name, &e.Company, &e.Email, &e.Phone, &e.Industry, &e.Message, &e.Status, &e.AdminNote, &e.CreatedAt)
 	return e, err
 }
 
 func (s enquiryStore) list(ctx context.Context) ([]Enquiry, error) {
 	rows, err := s.db.Query(ctx, `
-		SELECT id, name, company, email, phone, industry, message, status, created_at
+		SELECT id, name, company, email, phone, industry, message, status, admin_note, created_at
 		FROM enquiries ORDER BY created_at DESC LIMIT 500`)
 	if err != nil {
 		return nil, err
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (Enquiry, error) {
 		var e Enquiry
-		err := row.Scan(&e.ID, &e.Name, &e.Company, &e.Email, &e.Phone, &e.Industry, &e.Message, &e.Status, &e.CreatedAt)
+		err := row.Scan(&e.ID, &e.Name, &e.Company, &e.Email, &e.Phone, &e.Industry, &e.Message, &e.Status, &e.AdminNote, &e.CreatedAt)
 		return e, err
 	})
 }
 
 var errNotFound = errors.New("not found")
 
-func (s enquiryStore) setStatus(ctx context.Context, id int64, status string) error {
-	tag, err := s.db.Exec(ctx, `UPDATE enquiries SET status = $1 WHERE id = $2`, status, id)
+// change updates the status and/or note; a nil value leaves that field as it is.
+func (s enquiryStore) change(ctx context.Context, id int64, status, note *string) error {
+	tag, err := s.db.Exec(ctx, `
+		UPDATE enquiries SET status = COALESCE($1, status), admin_note = COALESCE($2, admin_note)
+		WHERE id = $3`, status, note, id)
 	if err != nil {
 		return err
 	}
@@ -183,17 +186,22 @@ func (app *App) handleUpdateEnquiry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Status string `json:"status"`
+		Status *string `json:"status"`
+		Note   *string `json:"adminNote"`
 	}
 	if err := readJSON(w, r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if !enquiryStatuses[body.Status] {
+	if body.Status != nil && !enquiryStatuses[*body.Status] {
 		writeError(w, http.StatusBadRequest, "unknown status")
 		return
 	}
-	switch err := app.enquiries.setStatus(r.Context(), id, body.Status); {
+	if body.Note != nil && len(*body.Note) > 5000 {
+		writeError(w, http.StatusBadRequest, "note is too long (5000 characters max)")
+		return
+	}
+	switch err := app.enquiries.change(r.Context(), id, body.Status, body.Note); {
 	case errors.Is(err, errNotFound):
 		writeError(w, http.StatusNotFound, "enquiry not found")
 	case err != nil:

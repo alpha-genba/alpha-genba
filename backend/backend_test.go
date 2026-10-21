@@ -7,7 +7,7 @@ import (
 )
 
 func TestEnquiryValidation(t *testing.T) {
-	valid := enquiryInput{Name: "  Ravi  ", Email: "ravi@example.com", Message: "We need an auto screwing station."}
+	valid := enquiryInput{Name: "  Ravi  ", Phone: "+91 90000 00000", Email: "ravi@example.com", Message: "We need an auto screwing station."}
 	clean, errs := valid.validate()
 	if errs != nil {
 		t.Fatalf("valid enquiry rejected: %v", errs)
@@ -22,8 +22,8 @@ func TestEnquiryValidation(t *testing.T) {
 		field string
 	}{
 		{"missing name", enquiryInput{Email: "a@b.co", Message: "Need a control panel."}, "name"},
-		{"no contact details", enquiryInput{Name: "Ravi", Message: "Need a control panel."}, "email"},
-		{"bad email", enquiryInput{Name: "Ravi", Email: "not-an-email", Message: "Need a control panel."}, "email"},
+		{"missing phone", enquiryInput{Name: "Ravi", Email: "a@b.co", Message: "Need a control panel."}, "phone"},
+		{"bad email", enquiryInput{Name: "Ravi", Phone: "9000000000", Email: "not-an-email", Message: "Need a control panel."}, "email"},
 		{"bad phone", enquiryInput{Name: "Ravi", Phone: "call me", Message: "Need a control panel."}, "phone"},
 		{"short message", enquiryInput{Name: "Ravi", Phone: "+91 99459 59359", Message: "hi"}, "message"},
 	}
@@ -104,5 +104,79 @@ func TestRateLimiter(t *testing.T) {
 	}
 	if !rl.allow("other-ip") {
 		t.Error("a different IP should not be blocked")
+	}
+}
+
+func TestOngoingValidation(t *testing.T) {
+	clean, errs := ongoingInput{Title: "Servo Press Line", Progress: 40}.validate()
+	if errs != nil {
+		t.Fatalf("valid ongoing project rejected: %v", errs)
+	}
+	if clean.Slug != "servo-press-line" || clean.Stage != "design" || clean.Visibility != "private" {
+		t.Errorf("defaults not applied: %+v", clean)
+	}
+
+	_, errs = ongoingInput{Title: "X", Progress: 120, Stage: "painting", Visibility: "secret"}.validate()
+	for _, f := range []string{"progress", "stage", "visibility"} {
+		if errs[f] == "" {
+			t.Errorf("expected an error on %q, got %v", f, errs)
+		}
+	}
+}
+
+func TestUpdateValidation(t *testing.T) {
+	in := updateInput{
+		Title:    "Frame welded",
+		Progress: 55,
+		Stage:    "manufacturing",
+		Media: []Media{
+			{Kind: "image", URL: "/api/uploads/0123456789abcdef0123456789abcdef.jpg"},
+			{Kind: "video", URL: "https://example.com/test.mp4"},
+			{Kind: "image", URL: "  "}, // empty entries are dropped
+		},
+	}
+	clean, errs := in.validate()
+	if errs != nil {
+		t.Fatalf("valid update rejected: %v", errs)
+	}
+	if len(clean.Media) != 2 {
+		t.Errorf("media = %d items, want 2", len(clean.Media))
+	}
+
+	bad := updateInput{Title: "x", Progress: 10, Stage: "design", Media: []Media{{Kind: "audio", URL: "https://a.b/c"}}}
+	if _, errs := bad.validate(); errs["media"] == "" {
+		t.Error("unknown media kind accepted")
+	}
+}
+
+func TestValidMediaURL(t *testing.T) {
+	good := []string{
+		"/api/uploads/0123456789abcdef0123456789abcdef.png",
+		"/images/machine.jpg",
+		"https://example.com/photo.jpg",
+	}
+	bad := []string{
+		"/api/uploads/../../secret.txt",
+		"/api/uploads/short.jpg",
+		"//evil.example.com/x.jpg",
+		"javascript:alert(1)",
+		"ftp://example.com/x.jpg",
+	}
+	for _, u := range good {
+		if !validMediaURL(u) {
+			t.Errorf("validMediaURL(%q) = false, want true", u)
+		}
+	}
+	for _, u := range bad {
+		if validMediaURL(u) {
+			t.Errorf("validMediaURL(%q) = true, want false", u)
+		}
+	}
+}
+
+func TestUnused(t *testing.T) {
+	got := unused([]string{"a", "b", "c"}, []string{"b", "d"})
+	if strings.Join(got, ",") != "a,c" {
+		t.Errorf("unused = %v, want [a c]", got)
 	}
 }
