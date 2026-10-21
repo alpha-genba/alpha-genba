@@ -401,6 +401,14 @@ Illustrative photos on the website are free stock photos from [Unsplash](https:/
 
 ---
 
+## License
+
+**Copyright © 2026 Vachana. All rights reserved.**
+
+You're welcome to view this project. Copying, reusing, modifying or presenting any part of it as your own work is not allowed without written permission. See [LICENSE](LICENSE) for details.
+
+---
+
 ## Author
 
 Designed and built by **Vachana** for Alpha Automations.
