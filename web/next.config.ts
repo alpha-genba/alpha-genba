@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
+// Where the Go backend runs. The website forwards every /api request to it,
+// so the browser only ever talks to one address.
+const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8080";
+
 const nextConfig: NextConfig = {
-  /* config options here */
   experimental: {
     agentFeedback: true,
   },
@@ -14,6 +17,9 @@ const nextConfig: NextConfig = {
         as: "*.css",
       },
     },
+  },
+  async rewrites() {
+    return [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }];
   },
 };
 

@@ -185,22 +185,79 @@ No data is lost, even on unreliable factory networks.
 | Edge gateway | Go |
 | Messaging | MQTT |
 | Database | PostgreSQL + TimescaleDB |
-| Real-time | WebSockets |
+| Real-time | HTTP polling today, WebSockets planned |
 | DevOps | Docker, GitHub Actions, Linux |
 
 ---
 
-## Planned Project Structure
+## Project Structure
 
 ```
 alpha-genba/
-├── simulator/   # Go: simulated machines for development and demos
-├── gateway/     # Go: edge gateway that reads PLC data
-├── backend/     # Go: REST + WebSocket API
-├── web/         # Next.js: company website, dashboard, admin panel
-├── deploy/      # Docker and deployment configuration
-└── docs/        # Architecture notes and decisions
+├── backend/     # Go: REST API, admin login, PostgreSQL access, live monitoring feed
+├── simulator/   # Go: simulated factory (machines, faults, OEE) with tests
+├── web/         # Next.js: company website, live dashboard, admin panel
+├── gateway/     # (planned) Go: edge gateway that reads real PLC data
+└── deploy/      # (planned) Docker and deployment configuration
 ```
+
+---
+
+## Run It Locally
+
+You need **Go** and **Node.js**. PostgreSQL does **not** need to be installed: in development the backend downloads and starts its own PostgreSQL automatically (data is kept in `.devdata/`).
+
+**1. Set the admin password** (first time only)
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Then open `backend/.env` and choose an `ADMIN_PASSWORD`. This file is ignored by Git.
+
+**2. Start the backend** (terminal 1, from the repository root)
+
+```bash
+go run ./backend
+```
+
+The API runs on http://localhost:8080. Stop it with **Ctrl + C** so the database shuts down cleanly.
+
+**3. Start the website** (terminal 2)
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Open http://localhost:3000. The website forwards every `/api` request to the backend.
+
+| Page | What it is |
+|---|---|
+| `/` | Home: services, genba approach, recent projects, live preview |
+| `/projects` | Project records added from the admin panel |
+| `/contact` | Request a Quote form (saved to PostgreSQL) |
+| `/live` | Live monitoring demo: machine status, Andon, OEE |
+| `/admin` | Admin panel: manage enquiries and projects |
+
+**Run the tests**
+
+```bash
+go test ./...
+```
+
+## API
+
+| Method | Path | Access |
+|---|---|---|
+| `GET` | `/api/health` | Public |
+| `GET` | `/api/projects`, `/api/projects/{slug}` | Public (published only) |
+| `POST` | `/api/enquiries` | Public (validated, rate-limited, spam honeypot) |
+| `GET` | `/api/monitor` | Public (live demo snapshot) |
+| `POST` | `/api/admin/login`, `/api/admin/logout` | Login is rate-limited |
+| `GET` / `PATCH` | `/api/admin/enquiries[/{id}]` | Admin |
+| `GET` / `POST` / `PUT` / `DELETE` | `/api/admin/projects[/{id}]` | Admin |
 
 ---
 
@@ -208,10 +265,10 @@ alpha-genba/
 
 | Phase | Website | Live Monitoring | Status |
 |---|---|---|---|
-| **0** | Project setup | Machine simulator | 🟡 In progress |
-| **1** | Home, about, services, contact | Simulator sends data to backend | ⚪ Planned |
-| **2** | Project records, quote requests, admin panel | Live dashboard with OEE and Andon | ⚪ Planned |
-| **3** | Launch with real projects and photos | Real PLC integration and pilot at a client factory | ⚪ Planned |
+| **0** | Project setup | Machine simulator | ✅ Done |
+| **1** | Home, services, approach, contact | Simulator feeds the backend | ✅ Done |
+| **2** | Project records, quote requests, admin panel | Live dashboard with OEE and Andon | ✅ Done |
+| **3** | Real projects and photos, deployment | MQTT + WebSockets, real PLC integration, pilot at a client factory | ⚪ Planned |
 
 ---
 

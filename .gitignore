@@ -1,0 +1,10 @@
+# Local development database files
+.devdata/
+
+# Secrets: never commit real passwords
+.env
+backend/.env
+
+# Build output
+*.exe
+/bin/
